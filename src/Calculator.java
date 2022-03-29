@@ -14,6 +14,7 @@ public class Calculator extends JFrame {
 	
 	private JTextField inputSpace; 
 	private String num = ""; 
+	private String prev_operation = ""; //방금 누른 버튼을 기억하도록 변수를 지정 
 	private ArrayList<String> equation = new ArrayList<String>(); //ArrayList 추가
 	
 	public Calculator() {
@@ -67,17 +68,25 @@ public class Calculator extends JFrame {
 	class PanActionListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
 			String operation = e.getActionCommand(); //getActionCommand로 어떤 버튼을 눌렀는지 받아온다
+			
 			if(operation.equals("C")) { //equals 비교
 				inputSpace.setText("");
-			}
-			else if(operation.equals("=")) {
+			} else if(operation.equals("=")) {
 				String result = Double.toString(calculator(inputSpace.getText()));
 				inputSpace.setText("" + result);
 				num = "";
-			} 
-			else {
+				//위의 계산식이 비어있지 않고 연산자를 중복으로 입력하지 않을 시 입력할 수 있게 만듬
+			} else if(operation.equals("+") || operation.equals("-") || operation.equals("×") || operation.equals("÷")) { //누른 버튼이 연산자일 때 조건문
+				if(inputSpace.getText().equals("") && operation.equals("-")) {
+					inputSpace.setText(inputSpace.getText() + e.getActionCommand());
+				}
+			  else if(!inputSpace.getText().equals("") && !prev_operation.equals("+") && !prev_operation.equals("-") && !prev_operation.equals("×") && !prev_operation.equals("÷")) { 	// 이전에 누른 버튼이 연산자가 아니고 위의 게산식이 비어있지 않을 때의 조건문
+					inputSpace.setText(inputSpace.getText() + e.getActionCommand());
+				}
+			} else {
 				inputSpace.setText(inputSpace.getText() + e.getActionCommand());
-			}
+			} 
+			prev_operation = e.getActionCommand(); //마지막으로 누른 버튼을 기억하도록 해준다
 		}
 	}
 	
@@ -86,8 +95,8 @@ public class Calculator extends JFrame {
 		
 		for(int i = 0;i < inputText.length(); i++) { //for문으로 계산식 하나하나 거쳐가게 함
 			char ch = inputText.charAt(i);
-			
-			if(ch == '-' | ch == '+' | ch == '×' | ch == '÷') { //연산기호가 나올 시 ArrayList에 추가되고 초기화
+			 
+		if(ch == '-' || ch == '+' || ch == '×' || ch == '÷') { //연산기호가 나올 시 ArrayList에 추가되고 초기화
 				equation.add(num); 
 				num = ""; //앞은 숫자이므로 숫자가 먼저
 				equation.add(ch + "");
@@ -96,6 +105,8 @@ public class Calculator extends JFrame {
 			}
 		}
 		equation.add(num); //반복문이 끝나고 최종적으로 있는 num도 ArrayList에 추가
+		equation.remove("");
+		//연산자가 있을 시 num을 ArrayList에 추가하게 되는데 이때, 처음에 -가 있으면 ""가 추가되어 오류 발생
 	}
 	
 	public double calculator(String inputText) {
@@ -105,7 +116,9 @@ public class Calculator extends JFrame {
 		double current = 0;
 		String mode = ""; // mode 라는 변수를 선언해 연산 기호에 대한 처리
 		
-		for(String s : equation) {
+		for(int i = 0;i<equation.size(); i++) {
+			String s = equation.get(i);
+			
 			if(s.equals("+")) {
 				mode = "add";
 			} else if(s.equals("-")) {
@@ -115,19 +128,42 @@ public class Calculator extends JFrame {
 			} else if(s.equals("÷")) {
 				mode = "div";
 			} else {
+				if((mode.equals("mul") || mode.equals("div")) && !s.equals("+") && !s.equals("-") && !s.equals("×") && !s.equals("÷")) {
+				Double one = Double.parseDouble(equation.get(i - 2));	
+				Double two = Double.parseDouble(equation.get(i));	
+				Double result = 0.0;
+				
+				if(mode.equals("mul")) {
+					result = one * two;
+				} else if(mode.equals("div")) {
+					result = one/two;
+				}
+				equation.add(i + 1,Double.toString(result));
+				
+				for(int j = 0; j < 3; j++) {
+					equation.remove(i-2);
+				}
+				i -= 2; //결과값이 생긴 인덱스로 이동
+				}
+			}
+		} //곱셉 나눗셈을 먼저 계산한다.
+		
+		for(String s : equation) {
+			if(s.equals("+")) {
+				mode = "add";
+			} else if(s.equals("-")) {
+				mode = "sub";
+			} else {
 				current = Double.parseDouble(s); //나머지(숫자)의 경우 문자열로 Double로 형변환을 해줘야 함
-				if(mode == "add") {
+				if(mode.equals("add")) {
 					prev += current;
-				} else if(mode == "sub") {
+				} else if(mode.equals("sub")) {
 					prev -= current;
-				} else if(mode == "mul") {
-					prev *= current;
-				} else if(mode == "div") {
-					prev /= current;
 				} else {
 					prev = current;
 				}
 			}
+			prev = Math.round(prev * 100000) / 100000.0; //Math.round(n * (10 * 표시할 자릿수)) / 10 * 표시할 자릿수로 반올림할 자릿수를 조절할 수 있다.
 		}
 		return prev;
 		
